@@ -2,6 +2,7 @@ using BlazorTest1.Client.Pages;
 using BlazorTest1.Components;
 using BlazorTest1.Components.Account;
 using BlazorTest1.Data;
+using BlazorTest1.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddScoped<FamilyMembershipService>();
 
 var app = builder.Build();
 

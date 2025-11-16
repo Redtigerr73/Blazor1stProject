@@ -1,45 +1,79 @@
-﻿@page "/membresdelafamille"
+@page "/membresdelafamille"
 @rendermode InteractiveServer
+@inject FamilyMembershipService MembershipService
 
-<h3>Membres de la famille</h3>
+<div class="mb-4">
+    <h2 class="mb-1">Gestion des membres de la famille</h2>
+    <p class="text-muted">
+        Ajoutez, consultez et mettez à jour la liste des membres de votre famille. Cette section explique comment
+        contribuer à la liste partagée : saisissez le prénom, le nom et l'âge, puis cliquez sur « Ajouter un membre ».
+    </p>
 
-<!-- Formulaire -->
-<div class="mb-3">
-    <input class="form-control mb-2"
-           placeholder="Nom"
-           @bind="FormMember.LastName" />
-
-    <input class="form-control mb-2"
-           placeholder="Prénom"
-           @bind="FormMember.FirstName" />
-
-    <input class="form-control mb-2"
-           placeholder="Âge"
-           type="number"
-           @bind="FormMember.Age" />
-
-    <button class="btn btn-primary" @onclick="AddMember">
-        Ajouter
-    </button>
+    <div class="alert alert-info" role="status">
+        Utilisez cette zone pour garder vos proches organisés. Vous pouvez ajouter plusieurs membres d'affilée,
+        puis supprimer ceux qui ne sont plus d'actualité.
+    </div>
 </div>
 
-<!-- Liste -->
-@if (Members.Count == 0)
+@if (!string.IsNullOrWhiteSpace(FeedbackMessage))
 {
-    <p class="text-muted fst-italic">Aucun membre enregistré.</p>
+    <div class="alert @(IsSuccess ? "alert-success" : "alert-danger")" role="alert">
+        @FeedbackMessage
+    </div>
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Ajouter un membre</h5>
+        <p class="card-text text-muted">Renseignez les informations principales pour créer une nouvelle entrée.</p>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label" for="firstName">Prénom</label>
+                <input id="firstName" class="form-control" @bind-value="FormMember.FirstName" @bind-value:event="oninput" placeholder="Ex: Marie" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="lastName">Nom</label>
+                <input id="lastName" class="form-control" @bind-value="FormMember.LastName" @bind-value:event="oninput" placeholder="Ex: Dupont" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="age">Âge</label>
+                <InputNumber id="age" class="form-control" @bind-Value="FormMember.Age" TValue="int?" placeholder="Ex: 32" />
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary" @onclick="AddMember" disabled="@IsAddDisabled">
+                Ajouter un membre
+            </button>
+            <button class="btn btn-outline-secondary" type="button" @onclick="ResetForm" disabled="@(!IsFormDirty)">
+                Réinitialiser
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex align-items-center gap-2 mb-2">
+    <span class="badge text-bg-primary fs-6">@MembershipService.Members.Count</span>
+    <span class="text-muted">membre@(MembershipService.Members.Count > 1 ? "s" : string.Empty) enregistré@(MembershipService.Members.Count > 1 ? "s" : string.Empty)</span>
+</div>
+
+@if (MembershipService.Members.Count == 0)
+{
+    <p class="text-muted fst-italic">Aucun membre enregistré pour le moment.</p>
 }
 else
 {
-    <ul class="list-group w-75">
-        @foreach (var m in Members)
+    <ul class="list-group w-100 w-md-75">
+        @foreach (var member in MembershipService.Members)
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>
-                    <strong>@m.FirstName @m.LastName</strong> — @m.Age ans
-                </span>
+            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div class="fw-semibold">@member.FirstName @member.LastName</div>
+                    <small class="text-muted">@member.Age ans</small>
+                </div>
 
-                <button class="btn btn-sm btn-outline-danger"
-                        @onclick="() => RemoveMember(m)">
+                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveMember(member)">
                     Supprimer
                 </button>
             </li>
@@ -48,42 +82,65 @@ else
 }
 
 @code {
-    public class FamilyMember
-    {
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        public int Age { get; set; }
-    }
+    private readonly FamilyMemberInput FormMember = new();
+    private string? FeedbackMessage;
+    private bool IsSuccess;
 
-    private List<FamilyMember> Members = new()
-    {
-        new FamilyMember { FirstName = "Mohamad", LastName = "Haji", Age = 37 },
-        new FamilyMember { FirstName = "Shérine", LastName = "Haji", Age = 9 }
-    };
+    private bool IsFormValid =>
+        !string.IsNullOrWhiteSpace(FormMember.FirstName) &&
+        !string.IsNullOrWhiteSpace(FormMember.LastName) &&
+        FormMember.Age.HasValue &&
+        FormMember.Age.Value > 0 &&
+        FormMember.Age.Value <= 120;
 
-    private FamilyMember FormMember = new();
+    private bool IsFormDirty =>
+        !string.IsNullOrWhiteSpace(FormMember.FirstName) ||
+        !string.IsNullOrWhiteSpace(FormMember.LastName) ||
+        FormMember.Age.HasValue;
+
+    private bool IsAddDisabled => !IsFormValid;
 
     private void AddMember()
     {
-        if (string.IsNullOrWhiteSpace(FormMember.FirstName) ||
-            string.IsNullOrWhiteSpace(FormMember.LastName) ||
-            FormMember.Age <= 0)
+        var candidate = new FamilyMember(
+            FormMember.FirstName?.Trim() ?? string.Empty,
+            FormMember.LastName?.Trim() ?? string.Empty,
+            FormMember.Age ?? 0);
+
+        var result = MembershipService.AddMember(candidate);
+
+        if (!result.Success)
         {
+            FeedbackMessage = result.ErrorMessage;
+            IsSuccess = false;
             return;
         }
 
-        Members.Add(new FamilyMember
-        {
-            FirstName = FormMember.FirstName,
-            LastName = FormMember.LastName,
-            Age = FormMember.Age
-        });
-
-        FormMember = new FamilyMember();
+        FeedbackMessage = $"{candidate.FirstName} {candidate.LastName} a été ajouté(e) à la liste.";
+        IsSuccess = true;
+        ResetForm();
     }
 
     private void RemoveMember(FamilyMember member)
     {
-        Members.Remove(member);
+        if (MembershipService.RemoveMember(member))
+        {
+            FeedbackMessage = $"{member.FirstName} {member.LastName} a été supprimé(e).";
+            IsSuccess = true;
+        }
+    }
+
+    private void ResetForm()
+    {
+        FormMember.FirstName = null;
+        FormMember.LastName = null;
+        FormMember.Age = null;
+    }
+
+    private sealed class FamilyMemberInput
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public int? Age { get; set; }
     }
 }

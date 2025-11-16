@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="BlazorTest1/BlazorTest1.Client/BlazorTest1.Client.csproj" />
   <Project Path="BlazorTest1/BlazorTest1/BlazorTest1.csproj" />
+  <Project Path="BlazorTest1.Tests/BlazorTest1.Tests.csproj" />
 </Solution>
