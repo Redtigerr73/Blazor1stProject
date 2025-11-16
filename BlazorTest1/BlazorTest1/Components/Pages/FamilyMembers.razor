@@ -1,0 +1,89 @@
+﻿@page "/membresdelafamille"
+@rendermode InteractiveServer
+
+<h3>Membres de la famille</h3>
+
+<!-- Formulaire -->
+<div class="mb-3">
+    <input class="form-control mb-2"
+           placeholder="Nom"
+           @bind="FormMember.LastName" />
+
+    <input class="form-control mb-2"
+           placeholder="Prénom"
+           @bind="FormMember.FirstName" />
+
+    <input class="form-control mb-2"
+           placeholder="Âge"
+           type="number"
+           @bind="FormMember.Age" />
+
+    <button class="btn btn-primary" @onclick="AddMember">
+        Ajouter
+    </button>
+</div>
+
+<!-- Liste -->
+@if (Members.Count == 0)
+{
+    <p class="text-muted fst-italic">Aucun membre enregistré.</p>
+}
+else
+{
+    <ul class="list-group w-75">
+        @foreach (var m in Members)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>
+                    <strong>@m.FirstName @m.LastName</strong> — @m.Age ans
+                </span>
+
+                <button class="btn btn-sm btn-outline-danger"
+                        @onclick="() => RemoveMember(m)">
+                    Supprimer
+                </button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    public class FamilyMember
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public int Age { get; set; }
+    }
+
+    private List<FamilyMember> Members = new()
+    {
+        new FamilyMember { FirstName = "Mohamad", LastName = "Haji", Age = 37 },
+        new FamilyMember { FirstName = "Shérine", LastName = "Haji", Age = 9 }
+    };
+
+    private FamilyMember FormMember = new();
+
+    private void AddMember()
+    {
+        if (string.IsNullOrWhiteSpace(FormMember.FirstName) ||
+            string.IsNullOrWhiteSpace(FormMember.LastName) ||
+            FormMember.Age <= 0)
+        {
+            return;
+        }
+
+        Members.Add(new FamilyMember
+        {
+            FirstName = FormMember.FirstName,
+            LastName = FormMember.LastName,
+            Age = FormMember.Age
+        });
+
+        FormMember = new FamilyMember();
+    }
+
+    private void RemoveMember(FamilyMember member)
+    {
+        Members.Remove(member);
+    }
+}
